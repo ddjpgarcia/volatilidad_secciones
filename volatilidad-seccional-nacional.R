@@ -1,4 +1,4 @@
-setwd("F:/bases diputados 2012-2021/volatilidad electoral/calculo volatilidad/volatildiad-diputados")
+setwd("~/volatildiad-diputados")
 rm(list=ls(all=TRUE))
 options(scipen = 999)
 ###----------------
@@ -303,20 +303,6 @@ hist(volatilidad_total$VOLATILIDAD_TOTAL)
 mean(volatilidad_total$VOLATILIDAD_TOTAL)
 #----------------------------------
 write.xlsx(volatilidad_total, "volatilidad_total_secciones.xlsx")
-
-#-----Estratificacion de la volatilidad 
-summary(volatilidad_total)
-
-volatilidad_total <- volatilidad_total|>mutate(VOLATILIDAD_CAT=case_when(
-  VOLATILIDAD_TOTAL<11~"BAJA",
-  VOLATILIDAD_TOTAL>10&VOLATILIDAD_TOTAL<21~"MEDIA",
-  VOLATILIDAD_TOTAL>20~"ALTA",
-  TRUE~NA
-))
-
-volatilidad_total$VOLATILIDAD_CAT <- factor(volatilidad_total$VOLATILIDAD_CAT, 
-                                            levels = c("BAJA","MEDIA","ALTA"))
-volatilidad_total
 #-------
 ##----Cargando shapefiles INE
 p_load(MCMCpack,coda,sf, patchwork, cowplot, viridis, broom, viridis)
@@ -358,54 +344,10 @@ mapa_ine <- inner_join(volatilidad_total, mapa_ine, by = c("ESTADO","ID_DISTRITO
 glimpse(mapa_ine)
 #####---------------
 extrafont::loadfonts()
-#Etiquetas
-#Clase que quiero
-no_classes <- 5
-# Extraer cuantiles
-q1 <- mapa_ine %>%
-  pull(VOLATILIDAD_TOTAL) %>%
-  quantile(probs = seq(0, 1, length.out = no_classes + 1), na.rm = TRUE) %>%
-  as.vector() # to remove names of quantiles, so idx below is numeric
-
-# Así se crean las etiquetas
-labels <- imap_chr(q1, function(., idx){
-  return(paste0(round(q1[idx] , digits=1),
-                "%",
-                " – ",
-                round(q1[idx + 1] , digits=1),
-                "%"))
-})
-# Se elimina la última etiqueta
-# En caso contrario sería hasta NA
-labels <- labels[1:length(labels) - 1]
-labels
-# Crear la variable
-mapa_ine%>%
-  mutate(VOLATILIDAD_CAT = cut(VOLATILIDAD_TOTAL,
-                              breaks = q1,
-                              labels = labels,
-                              include.lowest = T))-> mapa_ine
-
-
-table(mapa_ine$VOLATILIDAD_CAT)
-
-mapa_ine <- mapa_ine|>mutate(VOLATILIDAD_NIVEL=case_when(
-  VOLATILIDAD_CAT=="0% – 15.5%"~"Muy baja",
-  VOLATILIDAD_CAT=="15.5% – 19.9%"~"Baja",
-  VOLATILIDAD_CAT=="19.9% – 24.6%"~"Media",
-  VOLATILIDAD_CAT=="24.6% – 32.6%"~"Alta",
-  VOLATILIDAD_CAT=="32.6% – 100%"~"Muy alta",
-  TRUE~NA))
-
-table(mapa_ine$VOLATILIDAD_NIVEL)
-mapa_ine$VOLATILIDAD_NIVEL <- factor(mapa_ine$VOLATILIDAD_NIVEL, levels = c("Muy baja","Baja","Media","Alta","Muy alta"))
-
-
 #------------------------------------------
 p_load(stratification)
 cv <- sd(mapa_ine$VOLATILIDAD_TOTAL) / mean(mapa_ine$VOLATILIDAD_TOTAL) * 100
-cv
-
+set.seed(123)
 dalenius_secciones <-  strata.cumrootf(mapa_ine$VOLATILIDAD_TOTAL, CV=cv, Ls=5)
 mapa_ine$estrato <-  dalenius_secciones$stratumID
 
@@ -421,25 +363,6 @@ mapa_ine <- mapa_ine|>mutate(VOLATILIDAD_NIVEL=case_when(
 
 table(mapa_ine$VOLATILIDAD_NIVEL)
 mapa_ine$VOLATILIDAD_NIVEL <- factor(mapa_ine$VOLATILIDAD_NIVEL, levels = c("Muy baja","Baja","Media","Alta","Muy alta"))
-#---
-num_estratos <- 5
-# Crear una nueva variable para los estratos
-mapa_ine <- mapa_ine %>% mutate(estrato = NA)
-
-# Calcular los límites de estratos
-max_valor <- max(mapa_ine$VOLATILIDAD_TOTAL)
-min_valor <- min(mapa_ine$VOLATILIDAD_TOTAL)
-rango <- max_valor - min_valor
-ancho_estrato <- rango / num_estratos
-
-# Realizar el redondeo aleatorio y asignar a los estratos
-set.seed(123)  # Establecer una semilla para reproducibilidad
-mapa_ine$estrato <- cut(runif(nrow(mapa_ine), min_valor, max_valor), 
-                    breaks = seq(min_valor, max_valor, by = ancho_estrato), 
-                    labels = FALSE)
-
-
-
 #---------------------------
 #------Mapa de volatilidad : sinaloa
 mapa_ine|>
