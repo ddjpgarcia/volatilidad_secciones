@@ -445,7 +445,7 @@ secciones_volatilies_sinaloa|>
   labs(title = stringr::str_wrap("Sinaloa - Volatilidad por secciones electorales", width = 200),
        subtitle = stringr::str_wrap("Elecciones 2018-2021 diputados", width = 200),
        x =" ", y =" ",
-       caption = "Muy baja=0% – 15.5% Baja=15.5% – 19.9% Media=19.9% – 24.6% Alta=24.6% – 32.6% Muy alta=32.6% – 100% ")+
+       caption = "Muy baja=0% – 16% Baja=16% – 22.6% Media=22.6% – 30.6% Alta=30.6% – 45.3% Muy alta= +45.3%")+
   theme(legend.box ="vertical",
         legend.position="none",
         #legend.position = c(0.10, 0.88),
